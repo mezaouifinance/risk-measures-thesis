@@ -83,7 +83,6 @@ Le script permet de reproduire :
 - le backtesting de l’Expected Shortfall à 97,5 % ;
 - les stress tests historiques sur 2008 et 2020 ;
 - l’analyse de sensibilité à la taille de fenêtre ;
-- la comparaison entre copule gaussienne et copule t-Student ;
 - l’optimisation de portefeuille par minimisation de la CVaR ;
 - l’allocation d’Euler des contributions au risque.
 
