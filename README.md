@@ -105,3 +105,4 @@ Elles sont listées dans le fichier `requirements.txt`.
 Le code est fourni afin de rendre reproductibles les résultats empiriques du mémoire.
 
 Les valeurs numériques peuvent légèrement varier si les données sont retéléchargées depuis `yfinance`, en raison d’éventuels ajustements de prix.# m-moire-mesures-de-risque
+# m-moire-mesures-de-risque
