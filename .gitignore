@@ -1,0 +1,20 @@
+# Artefacts générés
+figures/
+results/
+*.png
+*.pdf
+
+# Données de marché mises en cache (gardez prices.csv si vous voulez figer le run)
+# data/prices.csv
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS / éditeurs
+.DS_Store
+.idea/
+.vscode/
