@@ -1,33 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-=====================================================================
-ANNEXE A — CODE PYTHON COMMENTÉ
-Théorie des Mesures de Risque — Mehdi Zaoui & Zakarya Sellami
-=====================================================================
-
-Ce fichier reproduit l'intégralité des résultats empiriques du mémoire.
-Il est conçu pour être lu et exécuté séquentiellement : chaque bloc
-s'appuie sur les variables définies dans les blocs précédents.
-
-Sections :
-    A.1  Téléchargement et préparation des données
-    A.2  Estimateurs de la VaR et de l'ES (3 méthodes)
-    A.3  VaR/ES glissantes et figure de l'évolution temporelle
-    A.4  Backtesting de la VaR : Kupiec et Christoffersen
-    A.5  Backtesting de l'ES : statistique d'Acerbi-Szekely
-    A.6  Stress test : crises de 2008 et 2020
-    A.7  Sensibilité du backtesting à la taille de fenêtre
-    A.8  Copules : gaussienne contre t-Student
-    A.9  Optimisation de portefeuille par minimisation de la CVaR
-    A.10 Allocation Euler des contributions au risque
-
-Prérequis :
-    pip install numpy pandas scipy matplotlib yfinance
-
-Temps d'exécution complet : quelques minutes sur une machine standard
-(la section A.7, qui rejoue le backtesting pour 4 tailles de fenêtre,
-est la plus longue).
-"""
 
 import numpy as np
 import pandas as pd
@@ -39,9 +9,7 @@ import math
 np.random.seed(42)        # reproductibilité globale
 
 
-# =====================================================================
 # A.1  TÉLÉCHARGEMENT ET PRÉPARATION DES DONNÉES
-# =====================================================================
 import os
 
 TICKERS = ['^GSPC', '^FCHI', 'AAPL', 'TTE.PA']   # S&P 500, CAC 40, Apple, TotalEnergies
@@ -76,10 +44,7 @@ print(f"Période : {port_losses.index[0].date()} -> {port_losses.index[-1].date(
 print(f"Nombre de jours : {len(port_losses)}")
 
 
-# =====================================================================
 # A.2  ESTIMATEURS DE LA VaR ET DE L'ES (3 MÉTHODES)
-# =====================================================================
-# Les trois méthodes du corps du mémoire.
 
 def var_es_historique(losses, alpha):
     """VaR et ES par quantile empirique sur la fenêtre."""
@@ -108,7 +73,6 @@ def var_es_montecarlo(losses, alpha, n_sim=100_000, seed=42):
     return var, es
 
 
-# --- Estimation à la dernière date sur la fenêtre de 250 jours -------
 last = port_losses.iloc[-WINDOW:]
 print("\nEstimations au", port_losses.index[-1].date())
 for a in (0.95, 0.975):
@@ -121,9 +85,7 @@ for a in (0.95, 0.975):
     print(f"  Monte Carlo   : VaR = {vm:.4f}  ES = {em:.4f}")
 
 
-# =====================================================================
 # A.3  VaR/ES GLISSANTES ET FIGURE DE L'ÉVOLUTION TEMPORELLE
-# =====================================================================
 
 def backtest_glissant(losses, alpha, window, methode, mc_sims=10_000):
     """Calcule, pour chaque jour t > window, la VaR et l'ES prédites
@@ -150,19 +112,9 @@ def backtest_glissant(losses, alpha, window, methode, mc_sims=10_000):
     exceptions = (actuals > vars_).astype(int)
     return vars_, ess, exceptions
 
-
-# Convention de niveaux suivie dans tout le mémoire :
-#   - la VaR est backtestée à 95 % (sections A.3 et A.4), niveau du corps
-#     du mémoire ;
-#   - l'ES est backtestée à 97,5 % (section A.5), conformément à la FRTB
-#     (Bâle III/IV) : l'ES y est relevée à 97,5 % pour offrir une sévérité
-#     comparable à une VaR à 99 %. Les deux niveaux coexistent donc à
-#     dessein. On ne conserve ici que la VaR glissante (pour la figure) ;
-#     les ES sont (re)calculées au bon niveau là où elles sont utilisées.
 ALPHA      = 0.95
 dates_test = port_losses.index[WINDOW:]
 
-# VaR glissante à 95 % pour les trois méthodes du corps du mémoire
 var_h, _, _ = backtest_glissant(port_losses, ALPHA, WINDOW, 'historique')
 var_p, _, _ = backtest_glissant(port_losses, ALPHA, WINDOW, 'parametrique')
 var_m, _, _ = backtest_glissant(port_losses, ALPHA, WINDOW, 'montecarlo')
@@ -177,9 +129,7 @@ ax.legend(loc='upper right'); ax.grid(alpha=0.3)
 plt.tight_layout(); plt.savefig('var_glissante.pdf'); plt.close()
 
 
-# =====================================================================
 # A.4  BACKTESTING DE LA VaR : KUPIEC ET CHRISTOFFERSEN
-# =====================================================================
 
 def kupiec(N, T, alpha):
     """Test de couverture inconditionnelle (1 ddl). Loi chi2(1) sous H0."""
@@ -214,8 +164,6 @@ def christoffersen(exc, alpha):
     LR_cc = LR_uc + LR_ind
     return LR_cc, 1 - stats.chi2.cdf(LR_cc, df=2)
 
-
-# Backtesting des trois méthodes
 print(f"\n=== Backtesting VaR à {ALPHA*100:.0f}% ===")
 methodes = {'Historique': 'historique', 'Paramétrique': 'parametrique',
             'MC Student': 'montecarlo'}
@@ -228,10 +176,7 @@ for nom, code in methodes.items():
     print(f"  Kupiec        : LR = {LR_uc:5.2f}  p = {p_uc:.4f}")
     print(f"  Christoffersen: LR = {LR_cc:5.2f}  p = {p_cc:.4f}")
 
-
-# =====================================================================
 # A.5  BACKTESTING DE L'ES : STATISTIQUE D'ACERBI-SZEKELY
-# =====================================================================
 
 def acerbi_szekely_z2(losses, vars_, ess, alpha):
     """Statistique Z2 d'Acerbi-Szekely (2014). E[Z2] = 0 sous le
@@ -258,10 +203,6 @@ def z2_pvalue_bootstrap(losses, vars_, ess, alpha, n_boot=1000, seed=42):
     p = np.mean(np.abs(z_sims) >= np.abs(z_obs))
     return z_obs, p
 
-
-# Niveau ES = 97,5 % (et non 95 %) : c'est la convention FRTB rappelée
-# plus haut. On RECALCULE donc la VaR/ES glissantes à ce niveau ci-dessous,
-# au lieu de réutiliser les sorties à 95 % de la section A.3.
 ALPHA_ES = 0.975
 actuals  = np.asarray(port_losses)[WINDOW:]   # pertes réalisées alignées sur la période de test
 print(f"\n=== Backtesting ES à {ALPHA_ES*100:.1f}% (Acerbi-Szekely) ===")
@@ -271,9 +212,7 @@ for nom, code in methodes.items():
     print(f"{nom:14s} Z2 = {z:+.3f}  p = {p:.3f}")
 
 
-# =====================================================================
 # A.6  STRESS TEST : CRISES DE 2008 ET 2020
-# =====================================================================
 
 def stress_window(returns, weights, start, end):
     """Rendements et pertes du portefeuille sur une fenêtre donnée."""
@@ -308,13 +247,8 @@ for label, (d1, d2), pire in [
         print(f"  {k:8s} veille : VaR = {v*100:.2f}%  ES = {e*100:.2f}%")
 
 
-# =====================================================================
 # A.7  SENSIBILITÉ DU BACKTESTING À LA TAILLE DE FENÊTRE
-# =====================================================================
-# Rejoue le backtesting pour plusieurs tailles de fenêtre afin
-# d'évaluer l'arbitrage réactivité / stabilité (cf. section 5).
 
-print("\n=== A.7  Sensibilité à la fenêtre (alpha = 95%) ===")
 fenetres = [60, 125, 250, 500]
 # On omet Monte Carlo ici (coûteux car re-fit Student à chaque fenêtre).
 methodes_sens = {'Historique': 'historique',
@@ -328,92 +262,8 @@ for w in fenetres:
     print(f"{w:>8d}", *[f"{t:>13.2f}%" for t in taux])
 
 
-# =====================================================================
-# A.8  COPULES : GAUSSIENNE CONTRE t-STUDENT
-# =====================================================================
-# Modélise la dépendance jointe des quatre actifs. La copule
-# gaussienne sous-estime les co-extrêmes ; la copule t-Student
-# possède une dépendance de queue strictement positive.
 
-print("\n=== A.8  Copules gaussienne vs t-Student ===")
-
-# 1) Marginales : loi de Student par actif
-params_t = {c: stats.t.fit(returns[c]) for c in TICKERS}
-
-# 2) Transformation en pseudo-observations uniformes (intégrale de proba)
-U = np.column_stack([
-    stats.t.cdf(returns[c], *params_t[c]) for c in TICKERS
-])
-U = np.clip(U, 1e-6, 1 - 1e-6)
-
-# 3) Copule gaussienne : corrélation des scores normaux
-Z_g     = stats.norm.ppf(U)
-R_gauss = np.corrcoef(Z_g, rowvar=False)
-
-# 4) Copule t-Student : (R, df) par profilage de vraisemblance sur df
-def loglik_copule_t(df_, U):
-    """Log-vraisemblance d'une copule t-Student de paramètre df_."""
-    Z = stats.t.ppf(U, df_)
-    R = np.corrcoef(Z, rowvar=False)
-    Rinv = np.linalg.inv(R)
-    _, logdetR = np.linalg.slogdet(R)
-    d = R.shape[0]
-    quad = np.einsum('ni,ij,nj->n', Z, Rinv, Z)
-    cst = (math.lgamma((df_ + d) / 2) - math.lgamma(df_ / 2)
-           - d * (math.lgamma((df_ + 1) / 2) - math.lgamma(df_ / 2)))
-    ll = (-0.5 * logdetR + cst
-          - 0.5 * (df_ + d) * np.log(1 + quad / df_)
-          + 0.5 * (df_ + 1) * np.log(1 + Z**2 / df_).sum(axis=1))
-    return ll.sum(), R
-
-best_df, R_t, best_ll = None, None, -np.inf
-for df_test in (3, 4, 5, 6, 8, 10, 15, 20, 30):
-    ll, R = loglik_copule_t(df_test, U)
-    if ll > best_ll:
-        best_ll, best_df, R_t = ll, df_test, R
-print(f"Copule t-Student : df optimal = {best_df}")
-
-# 5) Simulation jointe sous chaque copule + marginales Student
-def simule_copule(R, n_sim, params, tickers, df_cop=None, seed=1):
-    """Simule des rendements joints. Si df_cop est None : copule
-    gaussienne ; sinon : copule t-Student de paramètre df_cop."""
-    rng = np.random.default_rng(seed)
-    d = R.shape[0]
-    L = cholesky(R, lower=True)
-    Z = rng.standard_normal((n_sim, d)) @ L.T
-    if df_cop is None:                      # copule gaussienne
-        Uc = stats.norm.cdf(Z)
-    else:                                   # copule t-Student
-        W  = rng.chisquare(df_cop, n_sim) / df_cop
-        Uc = stats.t.cdf(Z / np.sqrt(W[:, None]), df_cop)
-    Uc = np.clip(Uc, 1e-9, 1 - 1e-9)
-    out = np.empty_like(Uc)
-    for i, tk in enumerate(tickers):
-        out[:, i] = stats.t.ppf(Uc[:, i], *params[tk])
-    return np.clip(out, -0.5, 1.0)          # borne les rendements aberrants
-
-N_SIM    = 100_000
-sims_g   = simule_copule(R_gauss, N_SIM, params_t, TICKERS, df_cop=None,    seed=1)
-sims_t   = simule_copule(R_t,     N_SIM, params_t, TICKERS, df_cop=best_df, seed=2)
-losses_g = -(sims_g @ weights)
-losses_t = -(sims_t @ weights)
-
-# 6) VaR/ES du portefeuille sous chaque copule
-print(f"{'alpha':>7s} {'ES gaussienne':>14s} {'ES t-Student':>14s} {'ratio':>7s}")
-for a in (0.95, 0.975, 0.99, 0.995):
-    eg = losses_g[losses_g > np.quantile(losses_g, a)].mean()
-    et = losses_t[losses_t > np.quantile(losses_t, a)].mean()
-    print(f"{a:>7.3f} {eg*100:>13.2f}% {et*100:>13.2f}% {et/eg:>7.2f}")
-
-
-# =====================================================================
-# A.9  OPTIMISATION DE PORTEFEUILLE PAR MINIMISATION DE LA CVaR
-# =====================================================================
-# Programme linéaire de Rockafellar-Uryasev (2000). On compare
-# équipondéré / minimum-variance / minimum-CVaR, calibrés in-sample
-# (2008-2018) et évalués out-of-sample (2019-2025).
-
-print("\n=== A.9  Optimisation CVaR (Rockafellar-Uryasev) ===")
+# A.8  OPTIMISATION DE PORTEFEUILLE PAR MINIMISATION DE LA CVaR
 
 def poids_min_cvar(R_train, alpha=0.95, w_min=0.0, w_max=1.0):
     """Minimise la CVaR par programme linéaire :
@@ -480,13 +330,7 @@ for nom, w in [('Équipondéré', w_eq), ('Min-variance', w_mv), ('Min-CVaR', w_
           f"pire perte = {losses_oos.max()*100:.2f}%")
 
 
-# =====================================================================
-# A.10  ALLOCATION EULER DES CONTRIBUTIONS AU RISQUE
-# =====================================================================
-# Décompose l'ES du portefeuille en contributions par actif :
-#     rho_i = w_i * E[X_i | X_Pi > VaR_alpha(X_Pi)] ,  somme = ES.
-
-print("\n=== A.10  Allocation Euler (ES 95%) ===")
+# A.9 ALLOCATION EULER DES CONTRIBUTIONS AU RISQUE
 
 def allocation_euler_es(losses_df, weights, alpha=0.95):
     """Contributions Euler à l'ES. Renvoie un dict {actif: contribution}
